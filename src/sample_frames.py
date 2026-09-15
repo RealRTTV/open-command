@@ -43,12 +43,15 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         row_data = df[df["playId"] == hardcoded_play_id].iloc[0]
     else:
         rows: int = df.shape[0]
-        while True:
+        while _ in range(rows):
             row: int = random.randint(0, rows - 1)
             row_data = df.iloc[row]
 
             if os.path.exists(os.path.join(SS_CACHE_DIR, f"sporty-video/{row_data["playId"]}.mp4")):
                 break
+        else:
+            print("Couldn't find a play we have downloaded for this date.")
+            return None
 
 
     game_pk: np.int64 = row_data["gamePk"].astype(np.int64)
