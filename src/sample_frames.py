@@ -175,7 +175,7 @@ def average_baseball_score_across_frames(mp4: cv2.VideoCapture, release_frame: i
         py = y
         previous_frame = frame
         n += 1
-    return sum / n
+    return 0 if n == 0 else sum / n
 
 def lightness(pixels: np.ndarray) -> np.ndarray:
     Cmax = np.max(pixels, axis=2)
@@ -236,7 +236,7 @@ def random_date(start, end):
     random_second = random.randint(0, delta_seconds)
     return start + datetime.timedelta(seconds=random_second)
 
-for _ in tqdm(range(5)):
+for _ in tqdm(range(10_000)):
     date = random_date("2026-04-01", "2026-08-13")
     date_string = date.strftime("%Y-%m-%d")
     res = get_row_for_sample(date_string)
