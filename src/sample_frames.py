@@ -34,7 +34,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     date: datetime.date = datetime.datetime.strptime(date, "%Y-%m-%d")
     play_ids_for_date_path: str = os.path.join(SS_CACHE_DIR, f"statcast-play-ids/{date.year}/{date.strftime("%Y-%m-%d")}.csv")
     if not os.path.exists(play_ids_for_date_path) or os.path.getsize(play_ids_for_date_path) == 0:
-        print("No play ids for that date exist. (My cache)")
+        print(f"No play ids for that date exist. ({date.strftime("%Y-%m-%d")}) (My cache)")
         return None
     df: pd.DataFrame = pd.read_csv(play_ids_for_date_path)
     df.dropna(subset=["playId"], inplace=True)
