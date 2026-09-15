@@ -95,6 +95,11 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
             best_score = score
             best_score_offset = offset
 
+    if best_score < 1.0:
+        print(f"No good offsets found (best: {best_score:.4f}).")
+        mp4.release()
+        return None
+
     release_mp4_frame: np.int64 = initial_guess_release_mp4_frame + best_score_offset
 
     baseball_center_df = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id)]
