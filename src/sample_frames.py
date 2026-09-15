@@ -7,8 +7,9 @@ import pandas as pd
 import numpy as np
 import cv2
 import os
+import platform
 
-SS_CACHE_DIR: str = "/Users/riley/Library/Caches/statcast-subsidiary"
+SS_CACHE_DIR: str = "/Users/riley/Library/Caches/statcast-subsidiary" if platform.system() == "Darwin" else "/home/riley/.cache/statcast-subsidiary"
 BASEBALL_WIDTH: int = 20
 BASEBALL_HEIGHT: int = 20
 
