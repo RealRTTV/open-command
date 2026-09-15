@@ -57,6 +57,8 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     # print(f"Chose {play_id}")
 
     open_command_csv_path = f"../data/2026/raw/gloveball_tracks/{game_pk}.csv.gz"
+    if not os.path.exists(open_command_csv_path):
+        return None
     oc_df: pd.DataFrame = pd.read_csv(open_command_csv_path, compression="gzip")
 
     sz_rows = sz_df.loc[(sz_df["game_pk"] == game_pk) & (sz_df["play_id"] == play_id)]
