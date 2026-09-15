@@ -74,7 +74,7 @@ raw/gloveball_tracks  raw/strikezone_tracking
             │                                    
             ▼                                   
   4. opencommand.py  ──► command_scores.csv
-                        (+ artifacts/validations_<year>.txt)
+                        (+ artifacts/validations/validations_<year>.txt)
 
 ```
 
@@ -83,7 +83,7 @@ raw/gloveball_tracks  raw/strikezone_tracking
 | 1 | `solve_camera_pose.py` | gloveball_tracks, strikezone_tracking, pbp_info | `camera_poses.csv.gz` |
 | 2 | `solve_glove_locations.py` | gloveball_tracks, camera_poses | `glove_locations/<game_pk>.csv.gz` |
 | 3 | `target_inference.py` | glove_locations, pbp_info | `targets.csv.gz` |
-| 4 | `opencommand.py` | targets, pbp_info, camera_poses, fg_pitching | `command_scores.csv` + `artifacts/validations_<year>.txt` |
+| 4 | `opencommand.py` | targets, pbp_info, camera_poses, fg_pitching | `command_scores.csv` + `artifacts/validations/validations_<year>.txt` |
 | — | `poselib.py` | (library, not a stage) | imported by steps 1 and 2 |
 
 > Step 1 is particularly heavy (hours); other steps take minutes.

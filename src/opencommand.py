@@ -19,7 +19,7 @@ Reads:      data/<year>/targets.csv.gz + data/<year>/pbp_info.csv.gz
 Writes:     data/<year>/command_scores.csv (plain csv, the one output small enough
             for GitHub uncompressed), per pitcher x pitch type (+ an ALL row per
             pitcher): n, naive_in, inferred_in
-            artifacts/validations_<season>.txt
+            artifacts/validations/validations_<season>.txt
 Run:        python src/opencommand.py [year=2026]
             The argument is a PATH FRAGMENT under data/, not a year, so a tree that
             keeps its scorable season somewhere deeper is named in full.
@@ -34,7 +34,7 @@ from target_inference import CELL, infer_targets
 
 SRC = Path(__file__).resolve().parent
 DATA = SRC.parent / "data"
-ART = SRC.parent / "artifacts"
+ART = SRC.parent / "artifacts" / "validations"
 
 LEADERBOARD_MIN_N = 100
 MIN_N_PT = 50
@@ -509,4 +509,4 @@ if __name__ == "__main__":
     print("\n".join(board))
     ART.mkdir(exist_ok=True)
     (ART / f"validations_{season}.txt").write_text("\n".join(L) + "\n", encoding="utf-8")
-    print(f"\nwrote data/{year}/command_scores.csv, artifacts/validations_{season}.txt")
+    print(f"\nwrote data/{year}/command_scores.csv, artifacts/validations/validations_{season}.txt")
