@@ -34,6 +34,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     date: datetime.date = datetime.datetime.strptime(date, "%Y-%m-%d")
     play_ids_for_date_path: str = os.path.join(SS_CACHE_DIR, f"statcast-play-ids/{date.year}/{date.strftime("%Y-%m-%d")}.csv")
     if not os.path.exists(play_ids_for_date_path) or os.path.getsize(play_ids_for_date_path) == 0:
+        print("No play ids for that date exist. (My cache)")
         return None
     df: pd.DataFrame = pd.read_csv(play_ids_for_date_path)
     df.dropna(subset=["playId"], inplace=True)
@@ -58,6 +59,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     open_command_csv_path = f"../data/2026/raw/gloveball_tracks/{game_pk}.csv.gz"
     if not os.path.exists(open_command_csv_path):
+        print("No game data exists. (OC Cache)")
         return None
     oc_df: pd.DataFrame = pd.read_csv(open_command_csv_path, compression="gzip")
 
@@ -84,6 +86,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     baseball_center = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id) & (oc_df["frame_idx"] >= 0)].sort_values(by="frame_idx")[["baseball_center_x", "baseball_center_y"]].to_numpy()
     if baseball_center.size == 0:
+        print("No baseball tracking data found. (OC cache)")
         mp4.release()
         return None
     best_score = 0.0
@@ -95,7 +98,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
             best_score = score
             best_score_offset = offset
 
-    if best_score < 1.0:
+    if best_score < 0.7:
         print(f"No good offsets found (best: {best_score:.4f}).")
         mp4.release()
         return None
