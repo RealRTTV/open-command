@@ -1,5 +1,6 @@
 import datetime
 import random
+from tqdm import tqdm
 from itertools import chain
 from typing import Optional
 
@@ -32,6 +33,8 @@ class StrikeZoneEntry:
 def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Optional[str]:
     date: datetime.date = datetime.datetime.strptime(date, "%Y-%m-%d")
     play_ids_for_date_path: str = os.path.join(SS_CACHE_DIR, f"statcast-play-ids/{date.year}/{date.strftime("%Y-%m-%d")}.csv")
+    if not os.path.exists(play_ids_for_date_path) or os.path.getsize(play_ids_for_date_path) == 0:
+        return None
     df: pd.DataFrame = pd.read_csv(play_ids_for_date_path)
     df.dropna(subset=["playId"], inplace=True)
 
@@ -230,10 +233,12 @@ def random_date(start, end):
     random_second = random.randint(0, delta_seconds)
     return start + datetime.timedelta(seconds=random_second)
 
-for _ in range(5):
+for _ in tqdm(range(5)):
     date = random_date("2026-04-01", "2026-08-13")
     date_string = date.strftime("%Y-%m-%d")
-    out += f"\n{get_row_for_sample(date_string)}"
+    res = get_row_for_sample(date_string)
+    if res is not None:
+        out += f"\n{res}"
 
 f = open("../dataset/ball/rows.csv", 'w')
 f.write(out)
