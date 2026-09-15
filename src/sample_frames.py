@@ -46,6 +46,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         print(f"Rows: {rows}")
         while _ in range(100):
             row: int = random.randint(0, rows - 1)
+            print(f"Trying row #{row}...")
             row_data = df.iloc[row]
 
             if os.path.exists(os.path.join(SS_CACHE_DIR, f"sporty-video/{row_data["playId"]}.mp4")):
