@@ -50,7 +50,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
             if os.path.exists(os.path.join(SS_CACHE_DIR, f"sporty-video/{row_data["playId"]}.mp4")):
                 break
         else:
-            print("Couldn't find a play we have downloaded for this date.")
+            print(f"Couldn't find a play we have downloaded for this date. (date: {date.strftime("%Y-%m-%d")})")
             return None
 
 
