@@ -1,7 +1,7 @@
 import datetime
 import random
 from itertools import chain
-from typing import Optional, Literal
+from typing import Optional
 
 import pandas as pd
 import numpy as np
@@ -221,8 +221,18 @@ def draw_img_for_frame(mp4: cv2.VideoCapture, mp4_frame: np.int64, oc_data, sz: 
 
 out = "game_pk,play_id,mp4_path,mp4_frame,frame_idx,release_mp4_frame,glove_center_x,glove_center_y,baseball_center_x,baseball_center_y,sz_x_left,sz_y_top,sz_x_right,sz_y_bottom,source"
 
+def random_date(start, end):
+    start: datetime.date = datetime.datetime.strptime(start, "%Y-%m-%d")
+    end: datetime.date = datetime.datetime.strptime(end, "%Y-%m-%d")
+    delta = end - start
+    delta_seconds = delta.days * 24 * 60 * 60 + delta.seconds
+    random_second = random.randint(0, delta_seconds)
+    return start + datetime.timedelta(seconds=random_second)
+
 for _ in range(5):
-    out += f"\n{get_row_for_sample("2026-08-13")}"
+    date = random_date("2026-04-01", "2026-08-13")
+    date_string = date.strftime("%Y-%m-%d")
+    out += f"\n{get_row_for_sample(date_string)}"
 
 f = open("../dataset/ball/rows.csv", 'w')
 f.write(out)
