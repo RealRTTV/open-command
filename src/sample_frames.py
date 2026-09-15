@@ -80,6 +80,8 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     # seconds
     mp4_length: np.float64 = mp4_frames / mp4_framerate
     initial_guess_release_mp4_frame: np.int64 = np.round((mp4_length - play_length) * mp4_framerate).astype(np.int64)
+    if initial_guess_release_mp4_frame < 0:
+        return None
 
     baseball_center = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id) & (oc_df["frame_idx"] >= 0)].sort_values(by="frame_idx")[["baseball_center_x", "baseball_center_y"]].to_numpy()
     if baseball_center.size == 0:
