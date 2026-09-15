@@ -43,16 +43,12 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         row_data = df[df["playId"] == hardcoded_play_id].iloc[0]
     else:
         rows: int = df.shape[0]
-        print(f"Rows: {rows}")
-        while _ in range(100):
-            row: int = random.randint(0, rows - 1)
-            print(f"Trying row #{row}...")
-            row_data = df.iloc[row]
+        row: int = random.randint(0, rows - 1)
+        print(f"Trying row #{row}...")
+        row_data = df.iloc[row]
 
-            if os.path.exists(os.path.join(SS_CACHE_DIR, f"sporty-video/{row_data["playId"]}.mp4")):
-                break
-        else:
-            print(f"Couldn't find a play we have downloaded for this date. (date: {date.strftime("%Y-%m-%d")})")
+        if not os.path.exists(os.path.join(SS_CACHE_DIR, f"sporty-video/{row_data["playId"]}.mp4")):
+            print(f"Couldn't find the play. (playId: {row_data["playId"]}, date: {date.strftime("%Y-%m-%d")})")
             return None
 
 
