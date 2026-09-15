@@ -34,7 +34,6 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     date: datetime.date = datetime.datetime.strptime(date, "%Y-%m-%d")
     play_ids_for_date_path: str = os.path.join(SS_CACHE_DIR, f"statcast-play-ids/{date.year}/{date.strftime("%Y-%m-%d")}.csv")
     if not os.path.exists(play_ids_for_date_path) or os.path.getsize(play_ids_for_date_path) == 0:
-        print(f"No play ids for that date exist. ({date.strftime("%Y-%m-%d")}) (My cache)")
         return None
     df: pd.DataFrame = pd.read_csv(play_ids_for_date_path)
     df.dropna(subset=["playId"], inplace=True)
@@ -47,7 +46,6 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         row_data = df.iloc[row]
 
         if not os.path.exists(os.path.join(SS_CACHE_DIR, f"sporty-video/{row_data["playId"]}.mp4")):
-            print(f"Couldn't find the play. (playId: {row_data["playId"]}, date: {date.strftime("%Y-%m-%d")})")
             return None
 
 
@@ -59,7 +57,6 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     open_command_csv_path = f"../data/2026/raw/gloveball_tracks/{game_pk}.csv.gz"
     if not os.path.exists(open_command_csv_path):
-        print("No game data exists. (OC Cache)")
         return None
     oc_df: pd.DataFrame = pd.read_csv(open_command_csv_path, compression="gzip")
 
@@ -86,7 +83,6 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     baseball_center = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id) & (oc_df["frame_idx"] >= 0)].sort_values(by="frame_idx")[["baseball_center_x", "baseball_center_y"]].to_numpy()
     if baseball_center.size == 0:
-        print("No baseball tracking data found. (OC cache)")
         mp4.release()
         return None
     best_score = 0.0
@@ -99,7 +95,6 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
             best_score_offset = offset
 
     if best_score < 0.7:
-        print(f"No good offsets found (best: {best_score:.4f}).")
         mp4.release()
         return None
 
@@ -236,8 +231,6 @@ def draw_img_for_frame(mp4: cv2.VideoCapture, mp4_frame: np.int64, oc_data, sz: 
         cv2.rectangle(frame, (0, 0), (int(mp4.get(cv2.CAP_PROP_FRAME_WIDTH)) - 1, int(mp4.get(cv2.CAP_PROP_FRAME_HEIGHT)) - 1), (0, 0, 255), 1)
     cv2.imwrite(filename, frame)
 
-out = "game_pk,play_id,mp4_path,mp4_frame,frame_idx,release_mp4_frame,glove_center_x,glove_center_y,baseball_center_x,baseball_center_y,sz_x_left,sz_y_top,sz_x_right,sz_y_bottom,source"
-
 def random_date(start, end):
     start: datetime.date = datetime.datetime.strptime(start, "%Y-%m-%d")
     end: datetime.date = datetime.datetime.strptime(end, "%Y-%m-%d")
@@ -246,15 +239,15 @@ def random_date(start, end):
     random_second = random.randint(0, delta_seconds)
     return start + datetime.timedelta(seconds=random_second)
 
+f = open("../dataset/ball/rows.csv", 'a')
+if os.path.getsize("../dataset/ball/rows.csv") == 0:
+    f.write("game_pk,play_id,mp4_path,mp4_frame,frame_idx,release_mp4_frame,glove_center_x,glove_center_y,baseball_center_x,baseball_center_y,sz_x_left,sz_y_top,sz_x_right,sz_y_bottom,source")
 for _ in tqdm(range(10_000)):
     date = random_date("2026-04-01", "2026-08-13")
     date_string = date.strftime("%Y-%m-%d")
     res = get_row_for_sample(date_string)
     if res is not None:
-        out += f"\n{res}"
-
-f = open("../dataset/ball/rows.csv", 'w')
-f.write(out)
+        f.write(f"\n{res}")
 f.close()
 
 # print(get_row_for_sample("2026-08-13", hardcoded_play_id="14ebe9b0-efba-3d6c-bbba-65abe7bc3658")) # offset = 9
