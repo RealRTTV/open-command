@@ -51,9 +51,6 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     game_pk: np.int64 = row_data["gamePk"].astype(np.int64)
     play_id: str = row_data["playId"]
-    # seconds
-    play_length: np.float64 = row_data["playLength"]
-    # print(f"Chose {play_id}")
 
     open_command_csv_path = f"../data/2026/raw/gloveball_tracks/{game_pk}.csv.gz"
     if not os.path.exists(open_command_csv_path):
@@ -124,9 +121,9 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     frame_width, frame_height = mp4.get(cv2.CAP_PROP_FRAME_WIDTH), mp4.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-    write_raw_img_for_frame(mp4, mp4_frame, f"../dataset/ball/images/train/play_{play_id}.frame_{mp4_frame.astype(int):03}.png")
+    write_raw_img_for_frame(mp4, mp4_frame, f"../dataset/ball/images/val/play_{play_id}.frame_{mp4_frame.astype(int):03}.png")
     if not np.isnan(baseball_center_x):
-        with open(f"../dataset/ball/labels/train/play_{play_id}.frame_{mp4_frame.astype(int):03}.txt", 'w') as f:
+        with open(f"../dataset/ball/labels/val/play_{play_id}.frame_{mp4_frame.astype(int):03}.txt", 'w') as f:
             f.write(f"0 {(baseball_center_x.astype(float) / frame_width):.6f} {(baseball_center_y.astype(float) / frame_height):.6f} {(BASEBALL_WIDTH / frame_width):.6f} {(BASEBALL_HEIGHT / frame_height):.6f}")
     # draw_img_for_frame(mp4, mp4_frame, get_oc_data_for_frame(oc_df, game_pk, play_id, frame_idx), sz, f"../frames/play_{play_id}.frame_{mp4_frame.astype(int):03}.png")
 
@@ -242,12 +239,14 @@ def random_date(start, end):
 f = open("../dataset/ball/rows.csv", 'a')
 if os.path.getsize("../dataset/ball/rows.csv") == 0:
     f.write("game_pk,play_id,mp4_path,mp4_frame,frame_idx,release_mp4_frame,glove_center_x,glove_center_y,baseball_center_x,baseball_center_y,sz_x_left,sz_y_top,sz_x_right,sz_y_bottom,source")
-for _ in tqdm(range(10_000)):
-    date = random_date("2026-04-01", "2026-08-13")
-    date_string = date.strftime("%Y-%m-%d")
-    res = get_row_for_sample(date_string)
-    if res is not None:
-        f.write(f"\n{res}")
+for _ in tqdm(range(2_000)):
+    while True:
+        date = random_date("2026-04-01", "2026-08-13")
+        date_string = date.strftime("%Y-%m-%d")
+        res = get_row_for_sample(date_string)
+        if res is not None:
+            f.write(f"\n{res}")
+            break
 f.close()
 
 # print(get_row_for_sample("2026-08-13", hardcoded_play_id="14ebe9b0-efba-3d6c-bbba-65abe7bc3658")) # offset = 9
