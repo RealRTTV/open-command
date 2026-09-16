@@ -25,8 +25,8 @@ OpenCommand is on par with the state-of-the-art command trackers, outperforming 
 It also predicts BB% better than BB% itself!
 
 <p align="center">
-  <img src="artifacts/target_error.png" width="32%">
-  <img src="artifacts/early_bb_2024_2025.png" width="32%">
+  <img src="artifacts/target_error.png" width="45%">
+  <img src="artifacts/early_bb_2024_2025.png" width="45%">
 </p>
 
 ## Updates
