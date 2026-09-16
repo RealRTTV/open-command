@@ -98,8 +98,11 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         if score > best_score:
             best_score = score
             best_score_offset = offset
-    scores = np.array(scores)
-    second_best_score = np.max(scores[scores < best_score]).astype(float)
+    if len(scores) <= 1:
+        mp4.release()
+        return None
+    scores.remove(best_score)
+    second_best_score = max(scores)
     if abs(second_best_score - best_score) < 0.05:
         mp4.release()
         return None
