@@ -79,9 +79,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     mp4_frames: np.int64 = np.int64(mp4.get(cv2.CAP_PROP_FRAME_COUNT))
     # seconds
     mp4_length: np.float64 = mp4_frames / mp4_framerate
-    initial_guess_release_mp4_frame: np.int64 = np.round((mp4_length - play_length) * mp4_framerate).astype(np.int64)
-    if initial_guess_release_mp4_frame < 0:
-        return None
+    initial_guess_release_mp4_frame: np.int64 = np.int64(180)
 
     baseball_center = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id) & (oc_df["frame_idx"] >= 0)].sort_values(by="frame_idx")[["baseball_center_x", "baseball_center_y"]].to_numpy()
     if baseball_center.size == 0:
@@ -89,7 +87,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         return None
     best_score = 0.0
     best_score_offset = 0
-    for offset in range(-5, 15 + 1):
+    for offset in range(-15, 15 + 1):
         score = average_baseball_score_across_frames(mp4, initial_guess_release_mp4_frame.astype(int) + offset, baseball_center)
         # print(f"offset {offset}: {score}")
         if score > best_score:

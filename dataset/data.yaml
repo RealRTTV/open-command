@@ -1,4 +1,4 @@
-path: /Users/riley/src/open-command/dataset/ball
+path: /home/riley/src/open-command/dataset/ball
 train: images/train
 val: images/val
 names:
