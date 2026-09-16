@@ -93,6 +93,8 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     best_score_offset = 0
     for offset in range(-15, 30 + 1):
         score = average_baseball_score_across_frames(all_relevant_frames, all_relevant_frames_starting_idx, initial_guess_release_mp4_frame + offset, baseball_center)
+        if np.isnan(score):
+            continue
         # print(f"offset {offset}: {score:.4f}")
         scores.append(score)
         if score > best_score:
