@@ -52,6 +52,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     game_pk: int = row_data["gamePk"].astype(int)
     play_id: str = row_data["playId"]
+    # print(f"Chose {play_id}")
 
     open_command_csv_path = f"../data/2026/raw/gloveball_tracks/{game_pk}.csv.gz"
     if not os.path.exists(open_command_csv_path):
@@ -87,16 +88,25 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     all_relevant_frames_starting_idx = initial_guess_release_mp4_frame - 15 - 1
     mp4.set(cv2.CAP_PROP_POS_FRAMES, all_relevant_frames_starting_idx)
     all_relevant_frames = [mp4.read()[1] for _ in range(all_relevant_frames_starting_idx, initial_guess_release_mp4_frame + 30 + baseball_center.size - 1)]
+    scores = []
     best_score: float = 0.0
-    best_score_offset: int = 0
+    best_score_offset = 0
     for offset in range(-15, 30 + 1):
         score = average_baseball_score_across_frames(all_relevant_frames, all_relevant_frames_starting_idx, initial_guess_release_mp4_frame + offset, baseball_center)
-        # print(f"offset {offset}: {score}")
+        # print(f"offset {offset}: {score:.4f}")
+        scores.append(score)
         if score > best_score:
             best_score = score
             best_score_offset = offset
+    scores = np.array(scores)
+    second_best_score = np.max(scores[scores < best_score]).astype(float)
+    if abs(second_best_score - best_score) < 0.05:
+        mp4.release()
+        return None
 
-    if best_score < 0.7:
+    # print(f"best offset {best_score_offset}: {best_score}")
+
+    if best_score <= 0.0:
         mp4.release()
         return None
 
@@ -163,10 +173,8 @@ def is_good_sample(baseball_center_df: pd.DataFrame, frame_idx: int) -> bool:
 
         return True
 
-
 def average_baseball_score_across_frames(all_relevant_frames: List[cv2.typing.MatLike], all_relevant_frames_starting_index: int, release_frame: int, baseball_center_by_frame: np.ndarray) -> float:
-    total = 0.0
-    n = 0
+    arr = []
     previous_frame = all_relevant_frames[release_frame - 1 - all_relevant_frames_starting_index]
     px, py = baseball_center_by_frame[0]
     for idx, row in enumerate(baseball_center_by_frame):
@@ -177,30 +185,38 @@ def average_baseball_score_across_frames(all_relevant_frames: List[cv2.typing.Ma
             py = y
             previous_frame = frame
             continue
-        total += baseball_score(previous_frame, frame, x, y, px, py)
+        arr.append(baseball_score(previous_frame, frame, x, y, px, py))
         px = x
         py = y
         previous_frame = frame
-        n += 1
-    return 0 if n == 0 else total / n
+
+    return np.median(np.array(arr, dtype=float))
 
 def lightness(pixels: np.ndarray) -> np.ndarray:
     c_max = np.max(pixels, axis=2)
     c_min = np.min(pixels, axis=2)
     return (c_max + c_min) / 2
 
+
+SCORING_RADIUS = 8
+
+np.set_printoptions(formatter={'float': lambda x: f"{x:+.2f}"}, linewidth=10000)
 def baseball_score(previous_frame: cv2.typing.MatLike, frame: cv2.typing.MatLike, x_f: float, y_f: float, px_f: float, py_f: float) -> float:
-    RADIUS = 5
+    grid_y, grid_x = np.ogrid[-SCORING_RADIUS:SCORING_RADIUS + 1, -SCORING_RADIUS:SCORING_RADIUS + 1]
+    distance = np.sqrt(grid_y ** 2 + grid_x ** 2)
+    ball = distance <= SCORING_RADIUS
+    lit = ball & (grid_y < 0)
+    unlit = ball & (grid_y >= 0)
+    background = ~ball
+    target_lightness = background * 0.0 + lit * 1.0 + unlit * 0.6
 
     x = int(x_f + 0.5)
     y = int(y_f + 0.5)
-    dist = np.nan_to_num(np.sqrt((px_f - x) ** 2 + (py_f - y) ** 2), nan=0)
-    previous_pixels = previous_frame[y - RADIUS : y + (RADIUS + 1), x - RADIUS : x + (RADIUS + 1)].astype(float) / 255.0
-    pixels = frame[y - RADIUS : y + (RADIUS + 1), x - RADIUS : x + (RADIUS + 1)].astype(float) / 255.0
+
+    pixels = frame[y - SCORING_RADIUS: y + (SCORING_RADIUS + 1), x - SCORING_RADIUS: x + (SCORING_RADIUS + 1)].astype(float) / 255.0
     pixel_lightness = lightness(pixels)
-    previous_pixel_lightness = lightness(previous_pixels)
-    diff = np.abs(pixel_lightness - previous_pixel_lightness)
-    score = min(dist, RADIUS * 2 * np.sqrt(2)) * (pixel_lightness + diff)
+
+    score = np.corrcoef(pixel_lightness.ravel(), target_lightness.ravel())[0, 1]
     return np.mean(score).astype(float)
 
 def get_oc_data_for_frame(oc_df: pd.DataFrame, game_pk: int, play_id: str, frame_idx: int):
@@ -248,7 +264,7 @@ def main():
     try:
         n = int(sys.argv[1])
     except IndexError, ValueError:
-        n = 2_000
+        n = 10_000
     for _ in tqdm(range(n)):
         while True:
             date = random_date("2026-04-01", "2026-08-13")
@@ -261,7 +277,7 @@ def main():
 
 main()
 
-# print(get_row_for_sample("2026-08-13", hardcoded_play_id="14ebe9b0-efba-3d6c-bbba-65abe7bc3658")) # offset = 9
-# print(get_row_for_sample("2026-08-13", hardcoded_play_id="64fa094b-16f6-331f-9ef0-eda20063dd62")) # offset = 5
-# print(get_row_for_sample("2026-08-13", hardcoded_play_id="014f13fc-ea72-3fc6-971b-23a112e121a2")) # offset = 4
-# print(get_row_for_sample("2026-08-13", hardcoded_play_id="62aaacc2-f590-38c9-a0ff-0e06efb6c5d3")) # offset = 1
+# print(get_row_for_sample("2026-08-13", hardcoded_play_id="14ebe9b0-efba-3d6c-bbba-65abe7bc3658")) # offset = 5
+# print(get_row_for_sample("2026-08-13")) # offset = ?
+# print(get_row_for_sample("2026-08-13", hardcoded_play_id="014f13fc-ea72-3fc6-971b-23a112e121a2")) # offset = 2
+# print(get_row_for_sample("2026-08-13", hardcoded_play_id="62aaacc2-f590-38c9-a0ff-0e06efb6c5d3")) # offset = -2
