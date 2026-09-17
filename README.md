@@ -211,7 +211,7 @@ A nice feature is that you can tell where the pitcher was *trying* to throw, whi
 - Inferred miss stabilizes 10x faster than Location+.
 - Inferred miss is stickier year-to-year than Location+, and even Stuff+.
 - Inferred miss correlates to BB% nearly as well as Location+.
-- Inferred miss predicts rest-of-season BB% better than BB% itself until about 500 pitches.
+- Inferred miss predicts rest-of-season BB% better than BB% itself until about 600 pitches.
 
 #### How close is OpenCommand to ground truth?
 
@@ -255,10 +255,6 @@ A nice feature is that you can tell where the pitcher was *trying* to throw, whi
 | Curveball (CU+KC) | 248 | 8.22 | 9.68 | 10.40 | 11.05 | 12.06 | 13.21 | 16.77 |
 | Changeup (CH) | 301 | 7.52 | 8.82 | 9.50 | 10.28 | 10.95 | 11.74 | 15.04 |
 | Splitter (FS) | 95 | 7.48 | 9.19 | 9.66 | 10.74 | 11.83 | 12.66 | 14.75 |
-
-#### **Why (~~mean~~) median miss?** 
-- Median is more robust to extreme values (e.g. due to bad inferred targets/glove detections/etc.)
-- Median (50th percentile) better answers "what's pitcher x's *typical* miss?". A pitcher can't miss by less than 0 in, but can spike one and get a 100 inch miss, which takes 100 pitches with 1 inch above mean miss to make up for it. So coloquially, median makes more sense as an "average".
 
 ## License & citation
 
