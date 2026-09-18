@@ -44,16 +44,16 @@ CONFIDENCE INTERVAL (median miss calculated on n random pitches vs end of season
     90%                       4.10      2.22      1.22      0.61      0.24      0.00
     bias                     -0.11     -0.01      0.02     -0.01     -0.02      0.00
 
-CORRELATIONS (Pearson, whole season, unweighted)
+CORRELATIONS (Pearson, mean miss, whole season, unweighted)
 ----------------------------------------------------------------
   Min. 500 pitches, N = 395
 
                                              naive              fixed offset                  inferred
-  BB%                      +0.457 [+0.381, +0.529]   +0.548 [+0.483, +0.608]   +0.590 [+0.532, +0.645]
-  Location+                -0.391 [-0.467, -0.311]   -0.550 [-0.616, -0.479]   -0.581 [-0.641, -0.516]
-  Stuff+                   +0.092 [-0.025, +0.210]   +0.189 [+0.081, +0.291]   +0.210 [+0.107, +0.310]
-  xERA                     -0.018 [-0.107, +0.076]   -0.013 [-0.109, +0.084]   -0.024 [-0.120, +0.074]
-  xERA | Stuff+            +0.032 [-0.061, +0.124]   +0.095 [-0.002, +0.191]   +0.096 [+0.000, +0.195]
+  BB%                      +0.459 [+0.379, +0.529]   +0.535 [+0.469, +0.594]   +0.580 [+0.521, +0.633]
+  Location+                -0.426 [-0.500, -0.347]   -0.562 [-0.625, -0.490]   -0.606 [-0.663, -0.543]
+  Stuff+                   +0.102 [-0.014, +0.216]   +0.169 [+0.063, +0.269]   +0.190 [+0.086, +0.292]
+  xERA                     -0.038 [-0.127, +0.051]   -0.014 [-0.114, +0.083]   -0.007 [-0.107, +0.090]
+  xERA | Stuff+            +0.015 [-0.075, +0.104]   +0.082 [-0.017, +0.177]   +0.103 [+0.006, +0.199]
 
   For reference, Location+ correlation to BB%: -0.675 [-0.727, -0.618]
 
@@ -74,14 +74,14 @@ STABILIZATION (cronbach's alpha, using mean miss)
   Location+ and Stuff+ ship one number per pitcher-season, so their vw is fitted
   across 3471 consecutive-season pairs and not measured per pitch.
 
-STICKINESS (unweighted)
+STICKINESS (mean miss, unweighted)
 ----------------------------------------------------------------
   year-over-year
 
                      50+ pitches  200+ pitches 1000+ pitches
-  naive                   +0.497        +0.648        +0.767
-  fixed offset            +0.607        +0.738        +0.855
-  inferred                +0.666        +0.800        +0.868
+  naive                   +0.574        +0.710        +0.780
+  fixed offset            +0.680        +0.803        +0.871
+  inferred                +0.717        +0.849        +0.886
   FF/SI mph               +0.939        +0.943        +0.943
   Location+               +0.403        +0.549        +0.552
   Stuff+                  +0.814        +0.827        +0.873

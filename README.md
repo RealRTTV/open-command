@@ -10,9 +10,6 @@
 
 </div>
 
-> [!IMPORTANT]  
-> Git history has been rewritten due to restructuring for large file support. If you have an existing clone or fork, delete it and re-clone.
-
 # Let's Measure Command
 
 [OpenCommand](https://x.com/open_command) measures **command** using the pitch location's distance from target.
@@ -24,10 +21,22 @@ This repo contains 2024/2025/2026 computer vision object detections and the full
 </p>
 <p align="center"><sub>Tyler Rogers dots a backdoor sinker (TB @ TOR, 2026/05/13). <b>Yellow box:</b> broadcast strikezone detection. <b>Thin white circle:</b> catcher glove detection. <b>Thick white circle:</b> glove detection projected onto strikezone plane.</sub></p>
 
+OpenCommand is on par with the state-of-the-art command trackers, outperforming human-annotated trackers.  
+It also predicts BB% better than BB% itself!
+
+<p align="center">
+  <img src="artifacts/target_error.png" width="45%">
+  <img src="artifacts/early_bb_2024_2025.png" width="45%">
+</p>
+
 ## Updates
 
+> [!IMPORTANT]  
+> Git history has been rewritten due to restructuring for large file support. If you have an existing clone or fork, delete it and re-clone.
+
 #### 2026-08-27: Version 1.2.0
-- Inferred targets are now a **2 level hierarchical model fit by empirical Bayes**: glove dependence (how much the target moves per inch of glove movement, 4 slopes xx, xz, zx, zz) plus an offset, both shrunk pitcher → league and pitch type → pitch type × handedness. The fixed `pitcher × pitch type × season` offset retires.
+- Inferred targets are now a [2 level hierarchical model fit by empirical Bayes](https://x.com/open_command/status/2093439260112167188)
+- This includes glove dependence + offset, both shrunk pitcher → league and pitch type → pitch type × handedness.
 
 #### 2026-08-21: Added 2024 season
 
@@ -188,11 +197,34 @@ OpenCommand tracks nearly all the pitches that it *can*, with most clips lost be
 
 ### Target maps
 
-A nice feature of this is that you can tell where the pitcher was *trying* to throw, which is really hard just looking at the final location.
+A nice feature is that you can tell where the pitcher was *trying* to throw, which is really hard just looking at the final location.
 
 <p align="center">
   <img src="artifacts/degrom_target_map_2025.png" alt="Jacob deGrom inferred targets and actual four-seam locations, 2025" width="720">
 </p>
+
+### Results
+
+#### How good is OpenCommand?
+
+- *See [here](https://x.com/open_command/status/2094029112507859241) for visuals!*
+- Inferred miss stabilizes 10x faster than Location+.
+- Inferred miss is stickier year-to-year than Location+, and even Stuff+.
+- Inferred miss correlates to BB% nearly as well as Location+.
+- Inferred miss predicts rest-of-season BB% better than BB% itself until about 600 pitches.
+
+#### How close is OpenCommand to ground truth?
+
+- OpenCommand is the [closest model to ground truth](https://x.com/open_command/status/2098417530427621640).
+- True median miss for **fastballs** is probably [7 to 10 inches](https://x.com/tomdoyo/status/2082066794404294671).
+- Inferred miss assumes every pitcher perfectly calibrates his pitches, but most pitchers are probably an inch or two off. At the same time, most pitchers fine tune their targets (beyond the catcher's glove) every pitch, depending on the situation. Perhaps these two cancel off on a season-level. 
+- So, on a season-level, OpenCommand has a good chance of being accurate within <1 inch. On a pitch-level, certainly not. 
+
+#### How important is command?
+
+- Going from worst to best command is [worth 1 ERA](https://x.com/open_command/status/2099096754520264972) (at the MLB level).
+- For reference, going from worst stuff to best stuff is [worth 3 ERA](https://x.com/open_command/status/2099239577697337394).
+- There might be a [minimum command](https://x.com/open_command/status/2099538707606802457) to be competitive.
 
 ### Command distribution
 
@@ -223,34 +255,6 @@ A nice feature of this is that you can tell where the pitcher was *trying* to th
 | Curveball (CU+KC) | 248 | 8.22 | 9.68 | 10.40 | 11.05 | 12.06 | 13.21 | 16.77 |
 | Changeup (CH) | 301 | 7.52 | 8.82 | 9.50 | 10.28 | 10.95 | 11.74 | 15.04 |
 | Splitter (FS) | 95 | 7.48 | 9.19 | 9.66 | 10.74 | 11.83 | 12.66 | 14.75 |
-
-### Some correlations
-
-**2025** — 478 pitchers, min. 500 pitches
-
-| | Naive | Inferred |
-|---|---:|---:|
-| BB% | +0.464 [+0.396, +0.533] | +0.564 [+0.495, +0.623] |
-| Location+ | -0.406 [-0.482, -0.335] | -0.606 [-0.657, -0.546] |
-| Stuff+ | +0.161 [+0.068, +0.254] | +0.198 [+0.098, +0.292] |
-| xERA | -0.071 [-0.160, +0.016] | -0.064 [-0.149, +0.022] |
-| xERA \| Stuff+ | +0.027 [-0.064, +0.120] | +0.064 [-0.029, +0.155] |
-
-In particular, we can see a strong correlation between command and walk rates.
-<p align="center">
-  <img src="artifacts/bb_command_2025.png" alt="2025 inferred median miss against walk rate, 478 pitchers" width="380">
-</p>
-
-#### **Why (~~mean~~) median miss?** 
-- Median is more robust to extreme values (e.g. due to bad inferred targets/glove detections/etc.)
-- Median (50th percentile) better answers "what's pitcher x's *typical* miss?". A pitcher can't miss by less than 0 in, but can spike one and get a 100 inch miss, which takes 100 pitches with 1 inch above mean miss to make up for it. So coloquially, median makes more sense as an "average".
-
-#### **How accurate is OpenCommand at measuring command?**
-- This is really hard to tell because there's no *ground truth* (unless we ask "hey where did you aim?" every pitch).
-- True median miss for **fastballs** is probably [7 to 10 inches](https://x.com/tomdoyo/status/2082066794404294671?s=20).
-- Glove detections get post-hoc adjustments based on detection accuracies. This adjustment makes miss distances unbiased, but doesn't remove the pitch-level variance. 
-- Inferred miss assumes every pitcher perfectly calibrates his pitches, but most pitchers are probably an inch or two off. At the same time, most pitchers fine tune their targets (beyond the catcher's glove) every pitch, depending on the situation. Perhaps these two cancel off on a season-level. 
-- So, on a season-level, OpenCommand has a good chance of being accurate within <1 inch. On a pitch-level, certainly not. 
 
 ## License & citation
 

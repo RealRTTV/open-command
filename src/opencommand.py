@@ -97,6 +97,12 @@ def per_pitcher(m, pid, floor):
     return s[s["size"] >= floor]["median"]
 
 
+def per_pitcher_mean(m, pid, floor):
+    """Each pitcher's mean miss."""
+    s = m.groupby(pid).agg(["mean", "size"])
+    return s[s["size"] >= floor]["mean"]
+
+
 # ─────────────────────────────────────────────  validations
 
 def val_median_miss(d, whole):
@@ -221,14 +227,14 @@ def cell(x, y, control=None):
 
 def val_correlations(d, whole, fg, fg_next, season):
     """BB%, Location+, Stuff+, xERA, and next season."""
-    t = pd.DataFrame({name: per_pitcher(whole[name], d.pitcher_id, 1)   # every pitcher we scored
+    t = pd.DataFrame({name: per_pitcher_mean(whole[name], d.pitcher_id, 1)   # every pitcher we scored
                       for name, _ in METHODS})
     cols = ["BB%", "sp_location", "sp_stuff", "xERA", "Pitches"]
     t = t.join(fg.set_index("xMLBAMID")[cols], how="inner")
     t = t[t.Pitches >= MIN_N_SEASON]        # pitches THROWN, so the pool does not move with coverage
     assert len(t) > 100, f"the Fangraphs join found only {len(t)} pitchers"
 
-    L = ["CORRELATIONS (Pearson, whole season, unweighted)", "-" * 64,
+    L = ["CORRELATIONS (Pearson, mean miss, whole season, unweighted)", "-" * 64,
          f"  Min. {MIN_N_SEASON} pitches, N = {len(t)}", "",
          f"  {'':22s}" + "".join(f"{n:>26s}" for n, _ in METHODS)]
     for lab, col, ctrl in VALIDITY_ROWS:
@@ -310,7 +316,7 @@ def val_stabilization(d, whole, fg_all):
 
 def val_stickiness(d, whole, prev, prev_year, fg, fg_prev):
     """Year-over-year correlations."""
-    L = ["STICKINESS (unweighted)", "-" * 64]
+    L = ["STICKINESS (mean miss, unweighted)", "-" * 64]
     if prev is None:
         return L + [f"  skipped: no {prev_year} tree on disk", ""]
     prev_miss = {name: missed(fn, prev, prev) for name, fn in METHODS}   # one fit, both rows
@@ -319,8 +325,8 @@ def val_stickiness(d, whole, prev, prev_year, fg, fg_prev):
     r, pools, notes = {lab: [] for lab in labels}, [], []
     for floor in STICKY_NS:
         for name, _ in METHODS:
-            j = pd.DataFrame({"prev": per_pitcher(prev_miss[name], prev.pitcher_id, floor),
-                              "cur": per_pitcher(whole[name], d.pitcher_id, floor)}).dropna()
+            j = pd.DataFrame({"prev": per_pitcher_mean(prev_miss[name], prev.pitcher_id, floor),
+                              "cur": per_pitcher_mean(whole[name], d.pitcher_id, floor)}).dropna()
             r[name].append(j.prev.corr(j.cur))
             pool = j.index
         j = pd.DataFrame({"prev": fb(prev), "cur": fb(d)}).reindex(pool).dropna()
