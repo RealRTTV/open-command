@@ -15,6 +15,7 @@ import platform
 SS_CACHE_DIR: str = "/Users/riley/Library/Caches/statcast-subsidiary" if platform.system() == "Darwin" else "/home/riley/.cache/statcast-subsidiary"
 BASEBALL_WIDTH: int = 20
 BASEBALL_HEIGHT: int = 20
+DIR = "train"
 
 sz_df = pd.read_csv("../data/2026/raw/strikezone_tracking.csv.gz", compression="gzip")
 
@@ -72,6 +73,25 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     mp4: cv2.VideoCapture = cv2.VideoCapture(mp4_path)
 
+    old_frame_width, old_frame_height = int(mp4.get(cv2.CAP_PROP_FRAME_WIDTH)), int(mp4.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    frame_size = (min(old_frame_width, old_frame_height) // 32) * 32
+    x0 = (old_frame_width - frame_size) // 2
+    x1 = old_frame_width - x0
+    y0 = (old_frame_height - frame_size) // 2
+    y1 = old_frame_height - y0
+    screenspace = x0, x1, y0, y1
+
+    crop_x_shift = max(0, (old_frame_width - frame_size) // 2)
+    crop_y_shift = max(0, (old_frame_height - frame_size) // 2)
+
+    crop_shift = np.array([crop_x_shift, crop_y_shift])
+
+    sz.x_left -= crop_x_shift
+    sz.x_right -= crop_x_shift
+    sz.y_top -= crop_y_shift
+    sz.y_bottom -= crop_y_shift
+
     # frames / seconds
     # mp4_framerate: float = mp4.get(cv2.CAP_PROP_FPS)
     # frames
@@ -80,7 +100,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     # mp4_length: float = mp4_frames / mp4_framerate
     initial_guess_release_mp4_frame: int = 180
 
-    baseball_center = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id) & (oc_df["frame_idx"] >= 0)].sort_values(by="frame_idx")[["baseball_center_x", "baseball_center_y"]].to_numpy()
+    baseball_center: np.ndarray = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id) & (oc_df["frame_idx"] >= 0)].sort_values(by="frame_idx")[["baseball_center_x", "baseball_center_y"]].to_numpy() - crop_shift
     if baseball_center.size == 0:
         mp4.release()
         return None
@@ -92,7 +112,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     best_score: float = 0.0
     best_score_offset = 0
     for offset in range(-15, 30 + 1):
-        score = average_baseball_score_across_frames(all_relevant_frames, all_relevant_frames_starting_idx, initial_guess_release_mp4_frame + offset, baseball_center)
+        score = average_baseball_score_across_frames(all_relevant_frames, all_relevant_frames_starting_idx, initial_guess_release_mp4_frame + offset, baseball_center, crop_shift)
         if np.isnan(score):
             continue
         # print(f"offset {offset}: {score:.4f}")
@@ -100,7 +120,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         if score > best_score:
             best_score = score
             best_score_offset = offset
-    if len(scores) <= 1:
+    if len(scores) <= 1 or best_score not in scores:
         mp4.release()
         return None
     scores.remove(best_score)
@@ -118,6 +138,8 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
     release_mp4_frame: int = initial_guess_release_mp4_frame + best_score_offset
 
     baseball_center_df = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id)]
+    has_ball = baseball_center_df[~np.isnan(baseball_center_df.baseball_center_x)]
+    max_frame_idx = 0 if has_ball.frame_idx.empty else int(has_ball.frame_idx.max())
     frame_idx: int = 0
     while True:
         choice = random.random()
@@ -125,7 +147,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         if choice < 0.4:
             rand = random.randint(-120, 0)
         else:
-            rand = random.randint(-15, 35)
+            rand = random.randint(-15, max_frame_idx + 7)
         mp4_frame: int = rand + release_mp4_frame
         if mp4_frame < 0 or mp4_frame >= mp4_frames:
             continue
@@ -133,20 +155,18 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
         if is_good_sample(baseball_center_df, frame_idx):
             break
 
-    glove_center_x, glove_center_y, baseball_center_x, baseball_center_y = get_oc_data_for_frame(oc_df, game_pk, play_id, frame_idx)
+    glove_center_x, glove_center_y, baseball_center_x, baseball_center_y = get_oc_data_for_frame(oc_df, game_pk, play_id, frame_idx, crop_shift)
 
     origin: str = "sampler"
 
     # for v in range(0, mp4_frames - 1):
-    #     draw_img_for_frame(mp4, v, get_oc_data_for_frame(oc_df, game_pk, play_id, v - release_mp4_frame), sz, f"frame_{v:03}.png", red_border=v == release_mp4_frame)
+    #     draw_img_for_frame(mp4, v, get_oc_data_for_frame(oc_df, game_pk, play_id, v - release_mp4_frame, crop_shift), sz, crop_shift, f"frame_{v:03}.png", screenspace, red_border=v == release_mp4_frame)
 
-    frame_width, frame_height = mp4.get(cv2.CAP_PROP_FRAME_WIDTH), mp4.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-    write_raw_img_for_frame(mp4, mp4_frame, f"../dataset/ball/images/val/play_{play_id}.frame_{mp4_frame:03}.png")
+    write_raw_img_for_frame(mp4, mp4_frame, f"../dataset/ball/images/{DIR}/play_{play_id}.frame_{mp4_frame:03}.png", screenspace)
     if not np.isnan(baseball_center_x):
-        with open(f"../dataset/ball/labels/val/play_{play_id}.frame_{mp4_frame:03}.txt", 'w') as f:
-            f.write(f"0 {float(baseball_center_x / frame_width):.6f} {float(baseball_center_y / frame_height):.6f} {(BASEBALL_WIDTH / frame_width):.6f} {(BASEBALL_HEIGHT / frame_height):.6f}")
-    # draw_img_for_frame(mp4, mp4_frame, get_oc_data_for_frame(oc_df, game_pk, play_id, frame_idx), sz, f"../frames/play_{play_id}.frame_{mp4_frame:03}.png")
+        with open(f"../dataset/ball/labels/{DIR}/play_{play_id}.frame_{mp4_frame:03}.txt", 'w') as f:
+            f.write(f"0 {float(baseball_center_x / frame_size):.6f} {float(baseball_center_y / frame_size):.6f} {(BASEBALL_WIDTH / frame_size):.6f} {(BASEBALL_HEIGHT / frame_size):.6f}")
+    # draw_img_for_frame(mp4, mp4_frame, get_oc_data_for_frame(oc_df, game_pk, play_id, frame_idx, crop_shift), sz, crop_shift, f"../frames/play_{play_id}.frame_{mp4_frame:03}.png", screenspace)
 
     mp4.release()
 
@@ -161,7 +181,7 @@ def is_row_nan(baseball_center_df: pd.DataFrame, frame_idx: int) -> bool | None:
         return np.isnan(x) or np.isnan(y)
 
 def is_good_sample(baseball_center_df: pd.DataFrame, frame_idx: int) -> bool:
-    MIN_NAN_SURROUNDING = 2
+    MIN_NAN_SURROUNDING = 1
 
     rows = baseball_center_df[baseball_center_df["frame_idx"] == frame_idx]
     if rows.empty:
@@ -178,22 +198,14 @@ def is_good_sample(baseball_center_df: pd.DataFrame, frame_idx: int) -> bool:
 
         return True
 
-def average_baseball_score_across_frames(all_relevant_frames: List[cv2.typing.MatLike], all_relevant_frames_starting_index: int, release_frame: int, baseball_center_by_frame: np.ndarray) -> float:
+def average_baseball_score_across_frames(all_relevant_frames: List[cv2.typing.MatLike], all_relevant_frames_starting_index: int, release_frame: int, baseball_center_by_frame: np.ndarray, crop_shift: np.ndarray) -> float:
     arr = []
-    previous_frame = all_relevant_frames[release_frame - 1 - all_relevant_frames_starting_index]
-    px, py = baseball_center_by_frame[0]
     for idx, row in enumerate(baseball_center_by_frame):
         frame = all_relevant_frames[release_frame + idx - all_relevant_frames_starting_index]
         x, y = row
-        if np.isnan(x) or np.isnan(y):
-            px = x
-            py = y
-            previous_frame = frame
+        if np.isnan(x) or np.isnan(y) or frame is None or frame.size == 0:
             continue
-        arr.append(baseball_score(previous_frame, frame, x, y, px, py))
-        px = x
-        py = y
-        previous_frame = frame
+        arr.append(baseball_score(frame, x, y, crop_shift))
 
     return np.median(np.array(arr, dtype=float))
 
@@ -205,8 +217,7 @@ def lightness(pixels: np.ndarray) -> np.ndarray:
 
 SCORING_RADIUS = 8
 
-np.set_printoptions(formatter={'float': lambda x: f"{x:+.2f}"}, linewidth=10000)
-def baseball_score(previous_frame: cv2.typing.MatLike, frame: cv2.typing.MatLike, x_f: float, y_f: float, px_f: float, py_f: float) -> float:
+def baseball_score(frame: cv2.typing.MatLike, x_f: float, y_f: float, crop_shift: np.ndarray) -> float:
     grid_y, grid_x = np.ogrid[-SCORING_RADIUS:SCORING_RADIUS + 1, -SCORING_RADIUS:SCORING_RADIUS + 1]
     distance = np.sqrt(grid_y ** 2 + grid_x ** 2)
     ball = distance <= SCORING_RADIUS
@@ -215,44 +226,49 @@ def baseball_score(previous_frame: cv2.typing.MatLike, frame: cv2.typing.MatLike
     background = ~ball
     target_lightness = background * 0.0 + lit * 1.0 + unlit * 0.6
 
-    x = int(x_f + 0.5)
-    y = int(y_f + 0.5)
+    x = int(x_f + crop_shift[0] + 0.5)
+    y = int(y_f + crop_shift[1] + 0.5)
 
     pixels = frame[y - SCORING_RADIUS: y + (SCORING_RADIUS + 1), x - SCORING_RADIUS: x + (SCORING_RADIUS + 1)].astype(float) / 255.0
     pixel_lightness = lightness(pixels)
 
+    if len(pixel_lightness) != len(target_lightness):
+        return 0.0
+
     score = np.corrcoef(pixel_lightness.ravel(), target_lightness.ravel())[0, 1]
     return np.mean(score).astype(float)
 
-def get_oc_data_for_frame(oc_df: pd.DataFrame, game_pk: int, play_id: str, frame_idx: int):
+def get_oc_data_for_frame(oc_df: pd.DataFrame, game_pk: int, play_id: str, frame_idx: int, crop_shift: np.ndarray):
     oc_rows = oc_df[(oc_df["game_pk"] == game_pk) & (oc_df["play_id"] == play_id) & (oc_df["frame_idx"] == frame_idx)]
     row = None if oc_rows.empty else oc_rows.iloc[0]
     if row is None:
         return np.nan, np.nan, np.nan, np.nan
     else:
-        return row.glove_center_x, row.glove_center_y, row.baseball_center_x, row.baseball_center_y
+        return row.glove_center_x - crop_shift[0], row.glove_center_y - crop_shift[1], row.baseball_center_x - crop_shift[0], row.baseball_center_y - crop_shift[1]
 
-def write_raw_img_for_frame(mp4: cv2.VideoCapture, mp4_frame: int, filename: str):
+def write_raw_img_for_frame(mp4: cv2.VideoCapture, mp4_frame: int, filename: str, screenspace):
+    x0, x1, y0, y1 = screenspace
     mp4.set(cv2.CAP_PROP_POS_FRAMES, mp4_frame)
     _, frame = mp4.read()
 
-    cv2.imwrite(filename, frame)
+    cv2.imwrite(filename, frame[y0:y1, x0:x1])
 
-def draw_img_for_frame(mp4: cv2.VideoCapture, mp4_frame: int, oc_data, sz: StrikeZoneEntry, filename: str, red_border: bool = False):
+def draw_img_for_frame(mp4: cv2.VideoCapture, mp4_frame: int, oc_data, sz: StrikeZoneEntry, crop_shift: np.ndarray, filename: str, screenspace, red_border: bool = False):
     glove_center_x, glove_center_y, baseball_center_x, baseball_center_y = oc_data
+    x0, x1, y0, y1 = screenspace
 
     mp4.set(cv2.CAP_PROP_POS_FRAMES, mp4_frame)
     _, frame = mp4.read()
 
     if not np.isnan(glove_center_x) and not np.isnan(glove_center_y):
-        cv2.circle(frame, (int(glove_center_x), int(glove_center_y)), 20, (0, 0, 255), 1)
+        cv2.circle(frame, (int(glove_center_x + crop_shift[0]), int(glove_center_y + crop_shift[1])), 20, (0, 0, 255), 1)
     if not np.isnan(baseball_center_x) and not np.isnan(baseball_center_y):
-        cv2.circle(frame, (int(baseball_center_x), int(baseball_center_y)), 10, (255, 255, 255), 1)
+        cv2.circle(frame, (int(baseball_center_x + crop_shift[0]), int(baseball_center_y + crop_shift[1])), 10, (255, 255, 255), 1)
     if not np.isnan(sz.x_left):
-        cv2.rectangle(frame, (int(sz.x_left), int(sz.y_top)), (int(sz.x_right), int(sz.y_bottom)), (0, 255, 255), 1)
+        cv2.rectangle(frame, (int(sz.x_left + crop_shift[0]), int(sz.y_top + crop_shift[1])), (int(sz.x_right + crop_shift[0]), int(sz.y_bottom + crop_shift[1])), (0, 255, 255), 1)
     if red_border:
         cv2.rectangle(frame, (0, 0), (int(mp4.get(cv2.CAP_PROP_FRAME_WIDTH)) - 1, int(mp4.get(cv2.CAP_PROP_FRAME_HEIGHT)) - 1), (0, 0, 255), 1)
-    cv2.imwrite(filename, frame)
+    cv2.imwrite(filename, frame[y0:y1, x0:x1])
 
 def random_date(start, end):
     start: datetime.date = datetime.datetime.strptime(start, "%Y-%m-%d")
@@ -263,8 +279,8 @@ def random_date(start, end):
     return start + datetime.timedelta(seconds=random_second)
 
 def main():
-    f = open("../dataset/ball/rows.csv", 'a')
-    if os.path.getsize("../dataset/ball/rows.csv") == 0:
+    f = open(f"../dataset/ball/rows_{DIR}.csv", 'a')
+    if os.path.getsize(f"../dataset/ball/rows_{DIR}.csv") == 0:
         f.write("game_pk,play_id,mp4_path,mp4_frame,frame_idx,release_mp4_frame,glove_center_x,glove_center_y,baseball_center_x,baseball_center_y,sz_x_left,sz_y_top,sz_x_right,sz_y_bottom,source")
     try:
         n = int(sys.argv[1])
