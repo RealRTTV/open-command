@@ -15,7 +15,7 @@ import platform
 SS_CACHE_DIR: str = "/Users/riley/Library/Caches/statcast-subsidiary" if platform.system() == "Darwin" else "/home/riley/.cache/statcast-subsidiary"
 BASEBALL_WIDTH: int = 20
 BASEBALL_HEIGHT: int = 20
-DIR = "train"
+DIR = "val"
 
 sz_df = pd.read_csv("../data/2026/raw/strikezone_tracking.csv.gz", compression="gzip")
 
@@ -71,7 +71,7 @@ def get_row_for_sample(date: str, hardcoded_play_id: Optional[str] = None) -> Op
 
     mp4_path: str = os.path.join(SS_CACHE_DIR, f"sporty-video/{play_id}.mp4")
 
-    mp4: cv2.VideoCapture = cv2.VideoCapture(mp4_path)
+    mp4: cv2.VideoCapture = cv2.VideoCapture(mp4_path, cv2.CAP_FFMPEG, [cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY])
 
     old_frame_width, old_frame_height = int(mp4.get(cv2.CAP_PROP_FRAME_WIDTH)), int(mp4.get(cv2.CAP_PROP_FRAME_HEIGHT))
 

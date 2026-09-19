@@ -6,8 +6,8 @@ import numpy as np
 import os
 
 start = time.time()
-model = YOLO("../runs/detect/train/weights/best.pt")
-results = model.predict("../dataset/ball/images/val", imgsz=1280, max_det=1, conf=0.01, batch=16, quantize=16)
+model = YOLO("../runs/detect/train-4/weights/best.engine")
+results = model.predict("../dataset/ball/images/val", imgsz=704, max_det=1, conf=0.01, batch=16, half=True)
 print(f"took {time.time() - start}s")
 raw = pd.read_csv('../dataset/ball/rows_val.csv')
 model_data = pd.DataFrame([{
