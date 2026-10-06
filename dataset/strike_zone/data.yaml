@@ -1,0 +1,5 @@
+path: /home/riley/src/open-command/dataset/strike_zone
+train: images/train
+val: images/val
+names:
+  0: strike_zone

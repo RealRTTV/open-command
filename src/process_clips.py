@@ -74,7 +74,7 @@ while True:
     n = read_batch_of_frames()
     if n == 0:
         break
-
+1
     results = execute_inference()
     # for result in results[:n]:
     #     boxes = result.boxes

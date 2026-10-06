@@ -1,0 +1,5 @@
+path: /home/riley/src/open-command/dataset/glove
+train: images/train
+val: images/val
+names:
+  0: glove
